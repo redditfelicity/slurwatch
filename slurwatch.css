@@ -1,0 +1,57 @@
+/*
+ * CSS for slurwatch. 
+ *
+ * 2013-06-14 <felicity@misandri.st> (/u/felicity_dont_real), released into
+ * the public domain.
+ */
+body {
+	background-color: white;
+	color: black;
+	margin: 0 0 0 0;
+	padding: 0 0 0 0;
+	font-family: verdana, arial, helvetica, sans-serif;
+	font-size: small;
+}
+
+h1 {
+	font-family: sans-serif;
+	border-bottom: dashed 1px black;
+	padding: 0.2em 0.5em 0.2em 0.5em;
+	margin: 0 0 0 0;
+	font-size: 14pt;
+}
+
+p {
+	margin: 0.5em 1em 0.5em 1em;
+}
+
+div.comment {
+	margin: 1em 1em 1em 1em;
+	padding: 0 0 0 0;
+	border: solid 1px #aaa;
+	color: #666;
+	font-size: small;
+}
+
+div.comment a {
+	color: #44a;
+	font-weight: bold;
+}
+
+div.comment-header {
+	background-color: #eef;
+	padding: 0.1em 0.1em 0.1em 0.1em;
+	margin: 0 0 0 0;
+}
+
+div.comment-text {
+	color: black;
+}
+
+div.comment-header span.ups {
+	color: #ff8b00;
+}
+
+div.comment-header span.downs {
+	color: #9491ff;
+}

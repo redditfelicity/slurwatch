@@ -1,0 +1,8 @@
+# Sample configuration file for slurwatch.  Copy this to "config" and
+# edit as appropriate.
+
+# Database connection string (or name).
+dbconn => "dbname=slurwatch",
+# Username and password
+dbuser => "scott",
+dbpass => "tiger",
