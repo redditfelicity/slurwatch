@@ -14,6 +14,11 @@ CREATE TABLE post (
 	name		VARCHAR(16) NOT NULL,
 	-- Textual subreddit name.
 	subreddit	VARCHAR(64) NOT NULL,
+	-- Reference to subreddit table
+	subreddit_id	INT NOT NULL REFERENCES subreddit(id)
+				ON DELETE CASCADE
+				ON UPDATE CASCADE,
+	
 	-- Absolute URL to the default comments page.
 	permalink	VARCHAR(512) NOT NULL,
 	score		INT NOT NULL,
@@ -96,3 +101,43 @@ INSERT INTO slur(slur) VALUES('shemales');
 INSERT INTO slur(slur) VALUES('retard');
 INSERT INTO slur(slur) VALUES('retarded');
 INSERT INTO slur(slur) VALUES('retards');
+
+-- subreddits: contains a list of subreddits we've seen, and those we want to
+-- scan.  Only subreddits with active=1 are scanned by slurwatch, and rest are
+-- those we picked up via /r/all.
+DROP TABLE IF EXISTS subreddit CASCADE;
+CREATE TABLE subreddit (
+	id	SERIAL PRIMARY KEY,
+	name	VARCHAR(64),
+	active	INT NOT NULL,
+
+	UNIQUE(name)
+);
+
+-- An index for looking up subreddit by name, ignoring case.
+CREATE UNIQUE INDEX subreddit_name_lower_idx ON subreddit(LOWER(name));
+
+INSERT INTO subreddit(name, active) VALUES('atheism');
+INSERT INTO subreddit(name, active) VALUES('AdviceAnimals', 1);
+INSERT INTO subreddit(name, active) VALUES('announcements', 1);
+INSERT INTO subreddit(name, active) VALUES('AskReddit', 1);
+INSERT INTO subreddit(name, active) VALUES('aww', 1);
+INSERT INTO subreddit(name, active) VALUES('bestof', 1);
+INSERT INTO subreddit(name, active) VALUES('blog', 1);
+INSERT INTO subreddit(name, active) VALUES('funny', 1);
+INSERT INTO subreddit(name, active) VALUES('IAmA', 1);
+INSERT INTO subreddit(name, active) VALUES('movies', 1);
+INSERT INTO subreddit(name, active) VALUES('Music', 1);
+INSERT INTO subreddit(name, active) VALUES('pics', 1);
+INSERT INTO subreddit(name, active) VALUES('politics', 1);
+INSERT INTO subreddit(name, active) VALUES('science', 1);
+INSERT INTO subreddit(name, active) VALUES('technology', 1);
+INSERT INTO subreddit(name, active) VALUES('todayilearned', 1);
+INSERT INTO subreddit(name, active) VALUES('videos', 1);
+INSERT INTO subreddit(name, active) VALUES('worldnews', 1);
+INSERT INTO subreddit(name, active) VALUES('WTF', 1);
+INSERT INTO subreddit(name, active) VALUES('mensrights', 1);
+INSERT INTO subreddit(name, active) VALUES('unitedkingdom', 1);
+INSERT INTO subreddit(name, active) VALUES('ukpolitics', 1);
+INSERT INTO subreddit(name, active) VALUES('gaming', 1);
+INSERT INTO subreddit(name, active) VALUES('gifs', 1);

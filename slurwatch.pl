@@ -26,13 +26,6 @@ my $dirname = dirname($scriptname);
 
 my %config = do "$dirname/config";
 
-# Which subreddits to scan.  Note that 'all' is listed here to pick up the
-# occasional popular post in other subs.
-my @subreddits = qw/atheism AdviceAnimals announcements AskReddit aww bestof
-	blog funny IAmA movies Music pics politics science technology
-	todayilearned videos worldnews WTF mensrights unitedkingdom
-	ukpolitics gaming gifs all/;
-
 # Parameters for re-scanning posts which have already been seen.  If a post
 # was last seen over $maxage seconds ago, it will always be re-scanned (as
 # long as it's still in top.json).  Otherwise, it will be re-scanned if was
@@ -74,8 +67,9 @@ my $sth_post_byname = $dbh->prepare("SELECT * FROM post WHERE name = ?") or die;
 my $sth_post_update = $dbh->prepare("UPDATE post SET last_seen = ?, comments = ?, "
 				   ."ups = ?, downs = ?, score = ? WHERE name = ?") or die;
 my $sth_post_insert = $dbh->prepare("INSERT INTO post (name, subreddit, permalink, score, "
-				   ."ups, downs, comments, first_seen, last_seen, posted) "
-				   ."VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+				   ."ups, downs, comments, first_seen, last_seen, posted, "
+				   ."subreddit_id) "
+				   ."VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 				   ."RETURNING id") or die;
 
 my $sth_comment_byname = $dbh->prepare("SELECT * FROM comment WHERE name = ?") or die;
@@ -86,6 +80,11 @@ my $sth_comment_insert = $dbh->prepare("INSERT INTO comment (name, post, permali
 my $sth_comment_update = $dbh->prepare("UPDATE comment SET text = ?, ups = ?, downs = ?, "
 				      ."score = ?, text_html = ? WHERE id = ?") or die;
 
+# Note that the subreddit table has an index on LOWER(name).
+my $sth_subreddit_byname = $dbh->prepare("SELECT * FROM subreddit WHERE LOWER(name) = LOWER(?)") or die;
+my $sth_subreddit_insert = $dbh->prepare("INSERT INTO subreddit(name, active) "
+					."VALUES(?, ?) RETURNING id") or die;
+
 # Load slurs from the database.  We keep the database id of each slur, but
 # currently don't use it for anything.  In future, it might be nice to track
 # which slur is used by which comment.
@@ -94,6 +93,14 @@ $s->execute;
 my %slurs;
 while (my @row = $s->fetchrow_array) {
 	$slurs{$row[1]} = $row[0];
+}
+
+# Load subreddits from the database.
+$s = $dbh->prepare("SELECT id, LOWER(name) FROM subreddit WHERE active=1");
+$s->execute;
+my %subreddits;
+while (my @row = $s->fetchrow_array) {
+	$subreddits{$row[1]} = $row[0];
 }
 
 # The regex used to match comments.  \b matches a word boundary (space,
@@ -273,9 +280,31 @@ sub do_a_post {
 		print " ... update\n" if $opt_v;
 		my $rc = $sth_post_update->execute(time, $comments, $ups, $downs, $score, $name);
 	} else {
+		# Do we already have a subreddit_id for this sub?
+		my $srid;
+		my $rc;
+		if (defined($subreddits{$sr})) {
+			$srid = $subreddits{$sr};
+		} else {
+			my @row;
+			# no active subreddit entry, check if we have an inactive entry.
+			$rc = $sth_subreddit_byname->execute($sr);
+			if (@row = $sth_subreddit_byname->fetchrow_array) {
+				$srid = $row[0];
+			} else {
+				# we've never seen this subreddit before.  add a new
+				# entry, setting active to 0 so we don't begin
+				# scanning this sub on the next run.
+				$rc = $sth_subreddit_insert->execute($sr, 0);
+				@row = $sth_subreddit_insert->fetchrow_array;
+				$srid = $row[0];
+			}
+		}
+
 		# Insert a new post
-		my $rc = $sth_post_insert->execute($name, $sr, $permalink, $score,
-					$ups, $downs, $comments, time, time, $created);
+		$rc = $sth_post_insert->execute($name, $sr, $permalink, $score,
+				$ups, $downs, $comments, time, time, $created,
+				$srid);
 		my @row = $sth_post_insert->fetchrow_array;
 
 		$postid = $row[0];
@@ -342,8 +371,8 @@ sub do_a_sub {
 	};
 
 	foreach my $post (@{$resp->{data}->{children}}) {
-		my $sr = $post->{data}->{subreddit};
-		do_a_post($sr, $post->{data});
+		my $srname = $post->{data}->{subreddit};
+		do_a_post($srname, $post->{data});
 		$nposts++;
 	}
 }
@@ -351,14 +380,15 @@ sub do_a_sub {
 my $then = time;
 
 # It would be more efficient to load posts from all subs at once, like this:
-#my $subs = join("+", @subreddits);
+#my $subs = join("+", keys %subreddits);
 #do_a_sub($subs);
-# However, that requires implementing paging to retrieve more than 100 results,
+# However, that requires implementing paging to retrieve more than 100 results,
 # so for now do it this way instead:
 
-foreach my $sr (@subreddits) {
+foreach my $sr (keys %subreddits) {
 	do_a_sub($sr);
 }
+do_a_sub('all');
 
 my $now = time;
 
