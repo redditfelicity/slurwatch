@@ -155,6 +155,8 @@ EOF
 
 	$dbh->disconnect;
 
+	$output .= "</body></html>";
+
 	print "Status: 200 OK\n";
 	print "Content-Type: text/html;charset=UTF-8\n";
 	print "\n";
